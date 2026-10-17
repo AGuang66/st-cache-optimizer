@@ -1,0 +1,38 @@
+{
+  "name": "st-cache-optimizer",
+  "version": "1.0.0",
+  "description": "SillyTavern server plugin that re-plans prompt-cache breakpoints before each request so dynamic prompts stop destroying cache hit rate.",
+  "type": "module",
+  "main": "plugin/index.js",
+  "license": "MIT",
+  "private": false,
+  "keywords": [
+    "sillytavern",
+    "sillytavern-plugin",
+    "prompt-caching",
+    "anthropic",
+    "openrouter",
+    "cache"
+  ],
+  "engines": {
+    "node": ">= 20"
+  },
+  "peerDependencies": {
+    "sillytavern": ">= 1.12.0"
+  },
+  "peerDependenciesMeta": {
+    "sillytavern": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "test": "node test/algorithms.test.mjs"
+  },
+  "files": [
+    "plugin",
+    "ui",
+    "manifest.json",
+    "README.md",
+    "LICENSE"
+  ]
+}

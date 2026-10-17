@@ -1,0 +1,78 @@
+<div class="cache-optimizer-panel">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>Cache Optimizer</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+
+            <div id="cache_optimizer_missing" class="cache-optimizer-warning" style="display: none;">
+                <i class="fa-solid fa-circle-info"></i>
+                <b>当前为前端模式</b>：断点优化已在浏览器里生效，无需任何额外安装。
+                仅以下两项需要服务端插件：
+                <br>· <b>Claude 直连</b>（服务端会重建消息块，前端断点会被丢弃）
+                <br>· <b>动态内容搬到末尾</b>与<b>缓存保活</b>
+                <br>需要的话把插件装进 <code>plugins/</code> 并开启 <code>enableServerPlugins</code>。
+            </div>
+
+            <div id="cache_optimizer_body">
+
+                <label class="checkbox_label" for="cache_optimizer_enabled">
+                    <input type="checkbox" id="cache_optimizer_enabled">
+                    <span><b>启用缓存优化</b></span>
+                </label>
+
+                <div class="cache-optimizer-status" id="cache_optimizer_status">未连接</div>
+                <div class="cache-optimizer-backend" id="cache_optimizer_backend"></div>
+
+                <label for="cache_optimizer_mode">
+                    <span>动态内容处置</span>
+                </label>
+                <select id="cache_optimizer_mode" class="text_pole">
+                    <option value="false">不动内容（最安全）</option>
+                    <option value="reorder">段内重排（低风险）</option>
+                    <option value="hoist">搬到末尾（最高命中）</option>
+                </select>
+                <small class="cache-optimizer-hint" id="cache_optimizer_mode_hint"></small>
+
+                <label class="checkbox_label" for="cache_optimizer_keepalive">
+                    <input type="checkbox" id="cache_optimizer_keepalive">
+                    <span>保持缓存热度（定时续期）</span>
+                </label>
+                <small class="cache-optimizer-hint" id="cache_optimizer_keepalive_hint">
+                    挂机超过 5 分钟后缓存会过期，下一轮整段冷启动。
+                    开启后会在到期前发一个极轻量请求续期：一次约花 0.1× 上下文，
+                    挡下一次冷启动就回本（省 0.9×）。会按周期产生真实 API 调用。
+                </small>
+
+                <div class="cache-optimizer-stats">
+                    <div class="cache-optimizer-stat">
+                        <div class="cache-optimizer-stat-value" id="cache_optimizer_hitrate">—</div>
+                        <div class="cache-optimizer-stat-label">缓存命中率</div>
+                    </div>
+                    <div class="cache-optimizer-stat">
+                        <div class="cache-optimizer-stat-value" id="cache_optimizer_read">—</div>
+                        <div class="cache-optimizer-stat-label">命中 tokens</div>
+                    </div>
+                    <div class="cache-optimizer-stat">
+                        <div class="cache-optimizer-stat-value" id="cache_optimizer_creation">—</div>
+                        <div class="cache-optimizer-stat-label">写入 tokens</div>
+                    </div>
+                </div>
+
+                <div class="cache-optimizer-row">
+                    <div id="cache_optimizer_refresh" class="menu_button menu_button_icon">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>刷新</span>
+                    </div>
+                    <div id="cache_optimizer_reset" class="menu_button menu_button_icon">
+                        <i class="fa-solid fa-eraser"></i>
+                        <span>清零</span>
+                    </div>
+                </div>
+
+                <small class="cache-optimizer-hint" id="cache_optimizer_footer"></small>
+            </div>
+        </div>
+    </div>
+</div>

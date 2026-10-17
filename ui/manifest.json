@@ -1,0 +1,16 @@
+{
+    "display_name": "Cache Optimizer",
+    "loading_order": 60,
+    "requires": [],
+    "optional": [],
+    "dependencies": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "st-cache-optimizer",
+    "version": "1.6.1",
+    "homePage": "https://github.com/your/st-cache-optimizer",
+    "minimum_client_version": "1.12.0",
+    "hooks": {
+        "activate": "init"
+    }
+}

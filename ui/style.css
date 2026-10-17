@@ -1,0 +1,90 @@
+/* Cache Optimizer —— 所有选择器都带自己的前缀，避免污染其他扩展与 ST 本体 */
+
+.cache-optimizer-panel .cache-optimizer-status {
+    font-size: 0.9em;
+    padding: 3px 8px;
+    border-radius: 5px;
+    display: inline-block;
+    margin: 4px 0 10px;
+    background-color: var(--black30a);
+}
+
+.cache-optimizer-panel .cache-optimizer-status.is-on {
+    background-color: var(--green30a, rgba(40, 160, 80, 0.3));
+}
+
+.cache-optimizer-panel .cache-optimizer-status.is-off {
+    background-color: var(--red30a, rgba(200, 60, 60, 0.3));
+}
+
+.cache-optimizer-panel .cache-optimizer-warning {
+    font-size: 0.9em;
+    line-height: 1.5;
+    padding: 8px 10px;
+    border-radius: 5px;
+    background-color: rgba(220, 180, 60, 0.18);
+    border-left: 3px solid rgba(220, 180, 60, 0.8);
+    margin-bottom: 10px;
+}
+
+.cache-optimizer-panel .cache-optimizer-warning code {
+    background-color: var(--black30a);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+.cache-optimizer-panel .cache-optimizer-hint {
+    display: block;
+    opacity: 0.72;
+    font-size: 0.85em;
+    line-height: 1.45;
+    margin: 4px 0 8px;
+}
+
+.cache-optimizer-panel .cache-optimizer-stats {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.cache-optimizer-panel .cache-optimizer-stat {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 6px;
+    background-color: var(--black30a);
+}
+
+.cache-optimizer-panel .cache-optimizer-stat-value {
+    font-size: 1.15em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.cache-optimizer-panel .cache-optimizer-stat-label {
+    font-size: 0.75em;
+    opacity: 0.7;
+    margin-top: 2px;
+}
+
+.cache-optimizer-panel .cache-optimizer-row {
+    display: flex;
+    gap: 8px;
+}
+
+.cache-optimizer-panel .cache-optimizer-row .menu_button {
+    flex: 1;
+    justify-content: center;
+}
+
+.cache-optimizer-panel .cache-optimizer-backend {
+    font-size: 0.82em;
+    opacity: 0.8;
+    margin: -6px 0 10px;
+    line-height: 1.5;
+}
+
+.cache-optimizer-panel .cache-optimizer-backend.is-warn {
+    color: #e0a020;
+    opacity: 1;
+}
