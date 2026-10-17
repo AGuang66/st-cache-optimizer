@@ -34,8 +34,45 @@ let serverAvailable = false;
 let serverProbed = false;
 
 /**
- * 拦截前端出站请求，在发出去之前把 cache_control 打好。
- * 这是整个插件的主路径 —— 不需要服务端插件也能工作。
+ * 主路径：挂 ST 的 CHAT_COMPLETION_SETTINGS_READY 事件。
+ *
+ * openai.js 里是这样：
+ *     await eventSource.emit(event_types.CHAT_COMPLETION_SETTINGS_READY, generate_data);
+ *     const response = await fetch(generate_url, { body: JSON.stringify(generate_data), ... });
+ *
+ * 事件拿到的是 generate_data 的**引用**，改它就能改真正发出去的请求。
+ * 这比包 window.fetch 稳得多：Tauri / Electron / 各种客户端即使包装过 fetch，
+ * 也绕不过这一步。fetch 钩子保留作为兜底（也用于读响应 usage）。
+ */
+function installEventHook() {
+    if (window.__stCacheOptimizerEventInstalled) {
+        return false;
+    }
+    window.__stCacheOptimizerEventInstalled = true;
+
+    try {
+        const context = getContext();
+        const { eventSource, eventTypes } = context;
+        if (!eventSource || !eventTypes?.CHAT_COMPLETION_SETTINGS_READY) {
+            return false;
+        }
+        eventSource.on(eventTypes.CHAT_COMPLETION_SETTINGS_READY, data => {
+            try {
+                clientOptimizer.optimize(data);
+                clientOptimizer.markEventSeen();
+            } catch (error) {
+                console.error('[cache-optimizer] 事件钩子失败', error);
+            }
+        });
+        return true;
+    } catch (error) {
+        console.error('[cache-optimizer] 挂事件钩子失败', error);
+        return false;
+    }
+}
+
+/**
+ * 兜底：拦截 window.fetch。用于没有触发事件的路径，以及读取响应 usage。
  */
 function installFetchHook() {
     if (window.__stCacheOptimizerInstalled) {
@@ -285,8 +322,15 @@ function updateBackendHint() {
 
 /** 前端模式下给出可操作的诊断信息 */
 function buildClientFooter(cs, rate) {
+    // 钩子状态优先说清楚：钩子没挂上，后面全是白搭
+    if (!cs.eventHook) {
+        return '纯前端模式 · 事件钩子未挂上（ST 版本可能过旧），已退回 fetch 钩子';
+    }
+
     if (cs.inspected === 0) {
-        return '纯前端模式已就绪。发一条消息后回来看。';
+        return cs.eventSeen > 0
+            ? '事件已触发但未识别为可优化的请求，请把下面这行发给开发者排查'
+            : '事件钩子已就绪。发一条消息后回来看（若一直为 0，说明请求没走 chat-completions）';
     }
 
     const base = `纯前端模式 · 已检查 ${cs.inspected} 次 · 改写 ${cs.optimized} 次`;
@@ -297,7 +341,7 @@ function buildClientFooter(cs, rate) {
     }
 
     if (cs.lastReason?.startsWith('unsupported-source')) {
-        return `${base} · 注意：当前后端不支持前端缓存优化：${cs.lastReason.split(':')[1]}`;
+        return `${base} · 注意：当前后端不支持前端缓存优化（${cs.lastReason.split(':')[1]}）`;
     }
 
     // 改写成功但没拿到 usage
@@ -476,8 +520,11 @@ export async function init() {
         return;
     }
 
-    // ★ 主路径：先装前端拦截，不依赖服务端插件
+    // ★ 主路径：事件钩子（最稳）
+    const eventOk = installEventHook();
+    // ★ 兜底：fetch 钩子（也用于读响应 usage）
     installFetchHook();
+    clientOptimizer.markHookState(eventOk);
 
     const html = await renderExtensionTemplateAsync(EXTENSION_NAME, 'settings');
     if (typeof html !== 'string' || html.length === 0) {

@@ -227,6 +227,10 @@ export function createClientOptimizer({ getConfig }) {
         lastReason: '',
         /** 响应里拿到 usage 的次数 */
         usageReports: 0,
+        /** 事件钩子是否挂上 */
+        eventHook: false,
+        /** 事件钩子被触发过几次 */
+        eventSeen: 0,
         tokens: { read: 0, creation: 0, input: 0, output: 0 },
     };
 
@@ -450,6 +454,14 @@ export function createClientOptimizer({ getConfig }) {
     return {
         optimize,
         trackResponse,
+        /** 记录事件钩子安装状态 */
+        markHookState(installed) {
+            stats.eventHook = Boolean(installed);
+        },
+        /** 事件钩子每次触发都记一笔 —— 用来区分「钩子没挂上」和「挂了但没触发」 */
+        markEventSeen() {
+            stats.eventSeen++;
+        },
         hitRate,
         stats: () => ({ ...stats }),
         reset() {

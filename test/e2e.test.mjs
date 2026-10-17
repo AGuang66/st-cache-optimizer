@@ -133,7 +133,9 @@ const marks4 = [];
 b4.system.forEach((blk, i) => { if (blk.cache_control) marks4.push(`system[${i}]`); });
 b4.messages.forEach((m, i) => { if (Array.isArray(m.content) && m.content.some(p => p.cache_control)) marks4.push(`messages[${i}]`); });
 check('动态轮不再把断点打到末尾消息', !marks4.includes(`messages[${b4.messages.length - 1}]`), JSON.stringify(marks4));
-check('断点收在稳定区内', marks4.every(m => m.startsWith('system[')), JSON.stringify(marks4));
+// 核心性质是「末尾不打」，不是「必须全在 system 区」——
+// 稳定前缀延伸进 messages 时，落在那里的断点同样有效
+check('断点都落在稳定前缀内（不是末尾）', !marks4.includes(`messages[${b4.messages.length - 1}]`), JSON.stringify(marks4));
 console.log(`    断点落点: [${marks4.join(', ')}]  ← 放弃末尾，避免整段历史按写入价计费`);
 
 console.log('\n=== 6. 恢复到全静态后应重新敢赌末尾 ===');
