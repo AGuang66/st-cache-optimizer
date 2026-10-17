@@ -231,6 +231,10 @@ export function createClientOptimizer({ getConfig }) {
         eventHook: false,
         /** 事件钩子被触发过几次 */
         eventSeen: 0,
+        /** 最近一次 usage 里出现的字段名（只记名字，不记值） */
+        lastUsageKeys: [],
+        /** 从 prefix 分析算出的估算命中率（不需要 usage） */
+        estimatedRate: null,
         tokens: { read: 0, creation: 0, input: 0, output: 0 },
     };
 
@@ -329,6 +333,14 @@ export function createClientOptimizer({ getConfig }) {
                 }
             }
 
+            // 估算命中率：不依赖 usage，纯看稳定前缀占比。
+            // 上游不返回缓存统计时，这是唯一还能给出的数字。
+            const totalChars = signature.reduce((a, t) => a + t.length, 0);
+            const stableChars = signature.slice(0, stableCount).reduce((a, t) => a + t.length, 0);
+            if (totalChars > 0 && stableCount > 0) {
+                stats.estimatedRate = stableChars / totalChars;
+            }
+
             // 记快照（保留最近 6 条）。
             // 若内容与最近一条完全一致，说明是对同一请求重复调用，
             // 不再追加 —— 否则历史里塞满同一条，稳定边界会退化成「整段都稳定」，
@@ -356,11 +368,21 @@ export function createClientOptimizer({ getConfig }) {
 
     /** 把一次 usage 计入统计 */
     function recordUsage(usage) {
+        if (usage && typeof usage === 'object') {
+            stats.lastUsageKeys = Object.keys(usage).slice(0, 12);
+        }
+
         const parsed = parseUsage(usage);
         if (!parsed) {
             return false;
         }
-        stats.usageReports++;
+
+        // 关键：只有带输入侧数据的 usage 才算一次有效报告。
+        // 流式的 message_delta 只带 output_tokens，若也计入，
+        // usageReports 会 > 0 但分母恒为 0 —— 命中率永远算不出来。
+        if (parsed.total > 0) {
+            stats.usageReports++;
+        }
         stats.tokens.read += parsed.read;
         stats.tokens.creation += parsed.creation;
         stats.tokens.input += parsed.input;

@@ -88,3 +88,10 @@
     color: #e0a020;
     opacity: 1;
 }
+
+.cache-optimizer-panel .cache-optimizer-version {
+    font-size: 0.72em;
+    font-weight: normal;
+    opacity: 0.55;
+    margin-left: 6px;
+}

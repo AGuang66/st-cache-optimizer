@@ -14,6 +14,9 @@ import { createClientOptimizer } from './client-optimizer.js';
 /** 服务端插件的路由前缀（有则用，没有也能跑） */
 const API_BASE = '/api/plugins/st-cache-optimizer';
 
+/** 扩展版本 —— 便于排查「你装的到底是哪一版」 */
+const EXTENSION_VERSION = '1.8.0';
+
 /** 前端要拦截的接口 */
 const GENERATE_PATH = '/api/backends/chat-completions/generate';
 
@@ -253,15 +256,27 @@ async function refresh() {
     updateBackendHint();
 
     const cs = clientOptimizer.stats();
-    const rate = clientOptimizer.hitRate();
+    const measured = clientOptimizer.hitRate();
+    const estimated = cs.estimatedRate;
 
-    setText('cache_optimizer_hitrate', rate === null ? '—' : `${(rate * 100).toFixed(1)}%`);
-    setText('cache_optimizer_read', rate === null ? '—' : formatNumber(cs.tokens.read));
-    setText('cache_optimizer_creation', rate === null ? '—' : formatNumber(cs.tokens.creation));
+    // 实测优先；拿不到 usage 时退到估算，至少别让人对着三个横杠
+    if (measured !== null) {
+        setText('cache_optimizer_hitrate', `${(measured * 100).toFixed(1)}%`);
+        setText('cache_optimizer_read', formatNumber(cs.tokens.read));
+        setText('cache_optimizer_creation', formatNumber(cs.tokens.creation));
+    } else if (estimated !== null) {
+        setText('cache_optimizer_hitrate', `~${(estimated * 100).toFixed(1)}%`);
+        setText('cache_optimizer_read', '—');
+        setText('cache_optimizer_creation', '—');
+    } else {
+        setText('cache_optimizer_hitrate', '—');
+        setText('cache_optimizer_read', '—');
+        setText('cache_optimizer_creation', '—');
+    }
 
     const footer = document.getElementById('cache_optimizer_footer');
     if (footer) {
-        footer.textContent = buildClientFooter(cs, rate);
+        footer.textContent = buildClientFooter(cs, measured);
     }
 
     setStatus(clientCfg.enabled ? '已开启（前端）' : '已关闭', clientCfg.enabled ? 'is-on' : 'is-off');
@@ -344,17 +359,22 @@ function buildClientFooter(cs, rate) {
         return `${base} · 注意：当前后端不支持前端缓存优化（${cs.lastReason.split(':')[1]}）`;
     }
 
-    // 改写成功但没拿到 usage
-    if (cs.optimized > 0 && cs.usageReports === 0) {
-        return `${base} · 已注入断点，但上游没返回 usage 数据，无法计算命中率`
-            + '（部分中转/自定义端点不返回缓存统计）';
-    }
-
     if (rate !== null) {
-        return `${base} · 命中率基于 ${cs.usageReports} 次响应的 usage 统计`;
+        return `${base} · 命中率来自 ${cs.usageReports} 次响应的 usage 统计`;
     }
 
-    return base;
+    // 没拿到可用 usage —— 分开说清楚是哪一种
+    const keys = (cs.lastUsageKeys ?? []).join(', ');
+    if (cs.usageReports === 0 && keys === '') {
+        return `${base} · 上游没返回 usage，命中率暂时算不出来`
+            + '（已改用前缀估算显示 ~ 值）';
+    }
+    if (cs.usageReports === 0) {
+        return `${base} · 收到 usage 但没有输入侧数据（字段：${keys}），无法算命中率`
+            + '（已改用前缀估算显示 ~ 值）';
+    }
+
+    return `${base} · 命中率基于 ${cs.usageReports} 次响应`;
 }
 
 /** 服务端可用时，用服务端的数据填充界面 */
@@ -542,6 +562,11 @@ export async function init() {
 
     $('#extensions_settings2').append(html);
     mounted = true;
+
+    const versionEl = document.getElementById('cache_optimizer_version');
+    if (versionEl) {
+        versionEl.textContent = `v${EXTENSION_VERSION}`;
+    }
 
     addWandButton();
 

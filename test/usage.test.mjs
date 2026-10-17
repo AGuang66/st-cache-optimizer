@@ -150,5 +150,43 @@ check('原始响应仍可读', jsonText.includes('cache_read_input_tokens'));
 await new Promise(r => setTimeout(r, 40));
 check('命中率 = 1800/2000 = 90%', Math.abs(opt.hitRate() - 0.9) < 1e-9, `${opt.hitRate()}`);
 
+console.log('\n=== 11. message_delta 不算一次有效 usage 报告 ===');
+opt.reset();
+// 只有 output_tokens 的 delta 不该污染 usageReports
+opt.trackResponse(fakeStreamResponse([
+    'data: {"type":"message_start","message":{"usage":{"input_tokens":500,"cache_read_input_tokens":4500}}}\n\n',
+    'data: {"type":"message_delta","usage":{"output_tokens":100}}\n\n',
+]));
+await new Promise(r => setTimeout(r, 60));
+check('只计 1 次有效报告', opt.stats().usageReports === 1, `${opt.stats().usageReports}`);
+check('命中率正常', Math.abs(opt.hitRate() - 0.9) < 1e-9, `${opt.hitRate()}`);
+
+console.log('\n=== 12. 只有 output 的 usage 不产生命中率，但有估算值 ===');
+opt.reset();
+opt.trackResponse(fakeStreamResponse(['data: {"type":"message_delta","usage":{"output_tokens":50}}\n\n']));
+await new Promise(r => setTimeout(r, 60));
+check('usageReports 仍为 0', opt.stats().usageReports === 0, `${opt.stats().usageReports}`);
+check('hitRate 为 null（不冒充 0%）', opt.hitRate() === null, `${opt.hitRate()}`);
+check('记录了 usage 字段名', opt.stats().lastUsageKeys.includes('output_tokens'), JSON.stringify(opt.stats().lastUsageKeys));
+
+console.log('\n=== 13. 估算命中率不依赖 usage ===');
+opt.reset();
+const mk = (turn) => {
+  const messages = [{ role: 'system', content: 'SYS' }, { role: 'system', content: 'CARD' }];
+  for (let i = 0; i < turn; i++) {
+    messages.push({ role: 'user', content: 'U' + i + 'x'.repeat(100) });
+    messages.push({ role: 'assistant', content: 'A' + i + 'y'.repeat(300) });
+  }
+  messages.push({ role: 'user', content: 'U' + turn });
+  return { chat_completion_source: 'openrouter', model: 'm', messages };
+};
+opt.optimize(mk(2));
+opt.optimize(mk(3));
+opt.optimize(mk(4));
+const est = opt.stats().estimatedRate;
+check('\u2605 没有 usage 也能算出估算命中率', typeof est === 'number' && est > 0, `${est}`);
+check('估算值合理（< 100%）', est < 1, `${est}`);
+console.log(`    估算命中率 ≈ ${(est * 100).toFixed(1)}%`);
+
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
 process.exit(fail ? 1 : 0);
